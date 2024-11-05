@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: image_classification_api
+    build:
+      context: ./deployment/docker
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MODEL_PATH=/app/models/model.pth
+      - DATA_PATH=/app/data
+    depends_on:
+      - inference
+      - db
+    networks:
+      - image_classification_net
+
+  inference:
+    container_name: model_inference
+    build:
+      context: ./deployment/docker
+      dockerfile: Dockerfile
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MODEL_PATH=/app/models/model.pth
+      - DATA_PATH=/app/data
+    networks:
+      - image_classification_net
+
+  db:
+    container_name: classification_db
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: classification
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - image_classification_net
+
+  logging:
+    container_name: logging_service
+    image: fluent/fluentd:latest
+    volumes:
+      - ./monitoring/logging:/fluentd/log
+      - ./monitoring/config:/fluentd/etc
+    environment:
+      - FLUENTD_CONF=fluent.conf
+    networks:
+      - image_classification_net
+
+networks:
+  image_classification_net:
+    driver: bridge
+
+volumes:
+  db_data:

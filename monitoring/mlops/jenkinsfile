@@ -1,0 +1,117 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'mlops-deployment:latest'
+        AWS_CREDENTIALS = credentials('aws-credentials')
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/repo-url'
+            }
+        }
+
+        stage('Set Up Environment') {
+            steps {
+                script {
+                    sh 'python3 -m venv venv'
+                    sh '. venv/bin/activate'
+                    sh 'pip install -r deployment/api/requirements.txt'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${DOCKER_IMAGE} -f deployment/docker/Dockerfile .'
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                script {
+                    sh 'pytest tests/test_models.py'
+                    sh 'pytest tests/test_data_pipeline.py'
+                    sh 'pytest tests/test_api.py'
+                }
+            }
+        }
+
+        stage('Train Model') {
+            steps {
+                script {
+                    sh 'python3 models/train.py --config configs/config.yaml'
+                }
+            }
+        }
+
+        stage('Evaluate Model') {
+            steps {
+                script {
+                    sh 'python3 models/evaluate.py --config configs/config.yaml'
+                }
+            }
+        }
+
+        stage('Deploy to AWS') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_CREDENTIALS']]) {
+                        sh 'python3 deployment/scripts/deploy_aws.py --config configs/config.yaml'
+                    }
+                }
+            }
+        }
+
+        stage('Monitor Metrics') {
+            steps {
+                script {
+                    sh 'python3 monitoring/metrics/monitor.py'
+                }
+            }
+        }
+
+        stage('Send Alerts if Degradation') {
+            steps {
+                script {
+                    sh 'python3 monitoring/metrics/alerts.py'
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                cleanWs()
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo 'Pipeline finished.'
+                archiveArtifacts artifacts: '**/logs/*.log', allowEmptyArchive: true
+            }
+        }
+
+        success {
+            script {
+                echo 'Pipeline successful!'
+            }
+        }
+
+        failure {
+            script {
+                echo 'Pipeline failed.'
+                mail to: 'team@website.com',
+                     subject: "Pipeline Failed: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
+                     body: "Build ${env.BUILD_NUMBER} of ${env.JOB_NAME} failed. Check console output for more details."
+            }
+        }
+    }
+}

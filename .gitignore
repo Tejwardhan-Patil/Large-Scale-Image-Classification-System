@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files for Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C++ build files
+*.o
+*.obj
+*.exe
+*.out
+*.dSYM/
+*.dSYM/*
+
+# Python virtual environments
+venv/
+env/
+*.egg-info/
+.eggs/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Data files
+*.csv
+*.parquet
+*.hdf5
+*.db
+
+# Log files
+*.log
+
+# Environment configuration files 
+*.env 
+.env.*
+
+# C++ project files
+*.a
+*.lib
+*.dylib
+*.so
+
+# macOS-specific files
+.DS_Store
+
+# IDE-specific files
+.idea/
+.vscode/
+*.iml

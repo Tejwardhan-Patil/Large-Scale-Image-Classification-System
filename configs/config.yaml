@@ -1,0 +1,105 @@
+# Configuration for Large-Scale Image Classification System
+
+project:
+  name: "Large-Scale Image Classification"
+  root_dir: "/project/root"
+  description: "An advanced image classification system using multiple architectures and cloud platforms."
+
+data:
+  raw_dir: "/data/raw"
+  processed_dir: "/data/processed"
+  annotations_dir: "/data/annotations"
+  batch_size: 64
+  image_size: [224, 224]
+  augmentation: 
+    rotation: 15  # degrees
+    horizontal_flip: true
+    vertical_flip: false
+    brightness: 0.1
+    contrast: 0.1
+
+models:
+  architectures:
+    - name: "ResNet50"
+      pretrained: true
+      input_shape: [224, 224, 3]
+      num_classes: 1000
+      weights: "/models/pretrained/resnet50.pth"
+      custom_layers: false
+    - name: "EfficientNet"
+      pretrained: true
+      input_shape: [224, 224, 3]
+      num_classes: 1000
+      weights: "/models/pretrained/efficientnet.onnx"
+      custom_layers: false
+    - name: "CustomCNN"
+      pretrained: false
+      input_shape: [224, 224, 3]
+      num_classes: 1000
+      weights: null
+      custom_layers: true
+      custom_script: "/models/custom/custom_cnn.py"
+
+  optimizer: "Adam"
+  learning_rate: 0.001
+  momentum: 0.9
+  weight_decay: 1e-4
+  lr_scheduler: "StepLR"
+  lr_step_size: 30
+  lr_gamma: 0.1
+
+training:
+  architectures_to_train:
+    - "ResNet50"
+    - "EfficientNet"
+    - "CustomCNN"
+  epochs: 100
+  validation_split: 0.2
+  early_stopping: true
+  early_stopping_patience: 10
+  save_checkpoints: true
+  checkpoint_dir: "/checkpoints"
+  log_dir: "/logs"
+  metrics: ["accuracy", "f1_score"]
+  loss_function: "cross_entropy"
+
+evaluation:
+  evaluation_script: "/evaluate.py"
+  test_data_dir: "/data/test"
+  metrics_output: "/evaluation/results.json"
+
+inference:
+  architectures_to_infer:
+    - "ResNet50"
+    - "EfficientNet"
+  inference_script: "/inference.py"
+  input_data_dir: "/new/images"
+  output_dir: "/inference/results"
+  batch_size: 32
+
+deployment:
+  cloud_platforms:
+    - platform: "aws"
+      docker_image: "image_classification:aws_latest"
+      api_endpoint: "http://aws-api.website.com/classify"
+      model_version: "v1.0"
+      container_port: 8080
+    - platform: "gcp"
+      docker_image: "image_classification:gcp_latest"
+      api_endpoint: "http://gcp-api.website.com/classify"
+      model_version: "v1.0"
+      container_port: 8080
+
+monitoring:
+  log_level: "INFO"
+  performance_metrics: ["accuracy", "f1_score", "precision", "recall"]
+  alert_thresholds:
+    accuracy: 0.85
+    f1_score: 0.8
+  notification_email: "alerts@website.com"
+
+ci_cd:
+  integration_tool: "github_actions"
+  deployment_tool: "jenkins"
+  ci_config: "/.github/workflows/ci.yml"
+  cd_config: "/.github/workflows/cd.yml"
